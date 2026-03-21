@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>Floating Head</title>
   <style>
     html, body {
@@ -12,10 +12,13 @@
       overflow: hidden;
       background: #000;
       font-family: Arial, sans-serif;
+      touch-action: manipulation;
     }
 
     canvas {
       display: block;
+      width: 100%;
+      height: 100%;
     }
 
     #motionButton {
@@ -23,28 +26,55 @@
       left: 50%;
       top: 50%;
       transform: translate(-50%, -50%);
-      background: #111;
-      color: white;
-      border: 1px solid #333;
+      background: rgba(20, 20, 20, 0.92);
+      color: #fff;
+      border: 1px solid #3a3a3a;
       padding: 14px 20px;
-      border-radius: 10px;
+      border-radius: 12px;
       font-size: 16px;
-      z-index: 10;
+      z-index: 20;
       cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    #status {
+      position: fixed;
+      left: 50%;
+      bottom: 20px;
+      transform: translateX(-50%);
+      color: rgba(255,255,255,0.75);
+      font-size: 12px;
+      z-index: 20;
+      text-align: center;
+      pointer-events: none;
     }
   </style>
 </head>
 <body>
   <button id="motionButton">Enable Motion</button>
+  <div id="status">Waiting for model…</div>
 
   <script type="module">
     import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js";
     import { GLTFLoader } from "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/loaders/GLTFLoader.js";
 
+    const statusEl = document.getElementById("status");
+    const button = document.getElementById("motionButton");
+
+    function setStatus(text) {
+      statusEl.textContent = text;
+      console.log(text);
+    }
+
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(0x000000);
 
-    const camera = new THREE.PerspectiveCamera(34, window.innerWidth / window.innerHeight, 0.1, 100);
+    const camera = new THREE.PerspectiveCamera(
+      34,
+      window.innerWidth / window.innerHeight,
+      0.1,
+      100
+    );
     camera.position.set(0, 0, 4.2);
 
     const renderer = new THREE.WebGLRenderer({
@@ -58,14 +88,14 @@
     renderer.toneMappingExposure = 1.15;
     document.body.appendChild(renderer.domElement);
 
-    const ambient = new THREE.AmbientLight(0xffffff, 0.7);
+    const ambient = new THREE.AmbientLight(0xffffff, 0.72);
     scene.add(ambient);
 
     const keyLight = new THREE.DirectionalLight(0xffffff, 2.2);
     keyLight.position.set(2.2, 2.5, 5);
     scene.add(keyLight);
 
-    const fillLight = new THREE.DirectionalLight(0xffffff, 0.9);
+    const fillLight = new THREE.DirectionalLight(0xffffff, 0.95);
     fillLight.position.set(-2.5, 0.8, 2.5);
     scene.add(fillLight);
 
@@ -96,11 +126,19 @@
         const scale = 2.15 / maxDim;
         head.scale.setScalar(scale);
 
+        head.traverse((child) => {
+          if (child.isMesh) {
+            child.geometry.computeVertexNormals();
+          }
+        });
+
         pivot.add(head);
+        setStatus("Model loaded. Tap Enable Motion.");
       },
       undefined,
       (error) => {
-        console.error("Error loading model:", error);
+        console.error(error);
+        setStatus("Model failed to load. Check models/head.glb");
       }
     );
 
@@ -110,6 +148,7 @@
     let calibrated = false;
     let baseGamma = 0;
     let baseBeta = 0;
+    let motionEnabled = false;
 
     function clamp(value, min, max) {
       return Math.max(min, Math.min(max, value));
@@ -123,6 +162,7 @@
         baseBeta = beta;
         baseGamma = gamma;
         calibrated = true;
+        setStatus("Motion connected.");
       }
 
       const deltaGamma = gamma - baseGamma;
@@ -132,27 +172,58 @@
       target.y = clamp(-deltaBeta / 35, -1, 1);
     }
 
-    async function enableMotion() {
+    button.addEventListener("click", async () => {
       try {
+        setStatus("Requesting motion access...");
+
         if (
           typeof DeviceOrientationEvent !== "undefined" &&
           typeof DeviceOrientationEvent.requestPermission === "function"
         ) {
           const permission = await DeviceOrientationEvent.requestPermission();
+
           if (permission === "granted") {
+            calibrated = false;
+            motionEnabled = true;
             window.addEventListener("deviceorientation", handleOrientation, true);
-            document.getElementById("motionButton").style.display = "none";
+            button.style.display = "none";
+            setStatus("Motion granted. Hold steady for calibration.");
+          } else {
+            setStatus("Motion permission denied.");
           }
-        } else {
+        } else if ("DeviceOrientationEvent" in window) {
+          calibrated = false;
+          motionEnabled = true;
           window.addEventListener("deviceorientation", handleOrientation, true);
-          document.getElementById("motionButton").style.display = "none";
+          button.style.display = "none";
+          setStatus("Motion enabled.");
+        } else {
+          setStatus("Device motion not supported. Using touch fallback.");
+          motionEnabled = false;
+          button.style.display = "none";
         }
       } catch (err) {
-        console.error("Motion permission error:", err);
+        console.error(err);
+        setStatus("Motion blocked. Using touch fallback.");
+        motionEnabled = false;
+        button.style.display = "none";
       }
+    });
+
+    function updateFromPointer(clientX, clientY) {
+      target.x = (clientX / window.innerWidth - 0.5) * 1.6;
+      target.y = (clientY / window.innerHeight - 0.5) * 1.2;
     }
 
-    document.getElementById("motionButton").addEventListener("click", enableMotion);
+    window.addEventListener("mousemove", (e) => {
+      if (!motionEnabled) updateFromPointer(e.clientX, e.clientY);
+    });
+
+    window.addEventListener("touchmove", (e) => {
+      if (!motionEnabled && e.touches.length > 0) {
+        updateFromPointer(e.touches[0].clientX, e.touches[0].clientY);
+      }
+    }, { passive: true });
 
     const clock = new THREE.Clock();
 
