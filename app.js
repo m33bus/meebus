@@ -134,7 +134,7 @@ function setModelTransforms(object) {
   object.position.y -= fittedCenter.y;
   object.position.z -= fittedCenter.z;
   object.position.y -= fittedSize.y * 0.08;
-  object.position.z = -1.2;
+  object.position.z = 0;
 }
 
 function addFallbackHead() {
