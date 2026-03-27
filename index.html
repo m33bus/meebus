@@ -8,18 +8,23 @@
 </head>
 <body>
   <main id="app">
-    <div id="scene-wrap" aria-label="Interactive 3D head"></div>
-
-    <div id="loading-overlay" aria-live="polite">
-      <div class="loading-text">loading<span id="dots"></span></div>
+    <div id="loading-screen" aria-live="polite">
+      <div class="loading-inner">
+        <div id="loading-text">loading</div>
+      </div>
     </div>
 
-    <img class="site-logo" src="./assets/logo.png" alt="" />
+    <div id="scene-wrap" aria-label="Interactive 3D head"></div>
+    <div class="site-haze" aria-hidden="true"></div>
+
+    <header class="site-header">
+      <img id="site-logo" src="./assets/logo.png" alt="Site logo" />
+    </header>
 
     <nav class="word-ring" aria-label="Site navigation">
-      <a href="./music.html" class="word word-music">music</a>
-      <a href="./merch.html" class="word word-merch">merch</a>
-      <a href="./other.html" class="word word-other">other</a>
+      <a href="music.html" class="word word-music">music</a>
+      <a href="merch.html" class="word word-merch">merch</a>
+      <a href="other.html" class="word word-other">other</a>
     </nav>
   </main>
 

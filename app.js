@@ -2,11 +2,11 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
 const MODEL_PATH = './assets/head.glb';
-const AUDIO_PATH = './assets/song.mp3';
+const SONG_PATH = './assets/song.mp3';
 
 const mount = document.getElementById('scene-wrap');
-const loadingOverlay = document.getElementById('loading-overlay');
-const dotsEl = document.getElementById('dots');
+const loadingScreen = document.getElementById('loading-screen');
+const loadingText = document.getElementById('loading-text');
 
 const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false, powerPreference: 'high-performance' });
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
@@ -19,7 +19,7 @@ const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x000000);
 
 const camera = new THREE.PerspectiveCamera(32, window.innerWidth / window.innerHeight, 0.1, 100);
-camera.position.set(0, 0.05, 5.5);
+camera.position.set(0, 0, 0);
 
 const hemi = new THREE.HemisphereLight(0xffffff, 0x111111, 1.6);
 scene.add(hemi);
@@ -50,43 +50,36 @@ let isPointerDown = false;
 let activePointerId = null;
 let lastPointerX = 0;
 let lastPointerY = 0;
-let loadingDone = false;
+let loadingComplete = false;
+let dotFrame = 0;
+let audioStarted = false;
 
 const dragScaleX = 0.0065;
 const dragScaleY = 0.0055;
 const maxTiltX = 0.48;
 const maxTiltY = 1.0;
-const returnSpeed = 0.012;
-const followSpeed = 0.11;
-
+const returnSpeed = 0.02;
+const followSpeed = 0.1;
 const clock = new THREE.Clock();
 
-const audio = new Audio(AUDIO_PATH);
-audio.loop = true;
-audio.preload = 'auto';
+const siteAudio = new Audio(SONG_PATH);
+siteAudio.loop = true;
+siteAudio.preload = 'auto';
+siteAudio.volume = 0.85;
 
-function tryPlayAudio() {
-  audio.play().catch(() => {});
-}
-window.addEventListener('pointerdown', tryPlayAudio, { once: true });
-window.addEventListener('touchstart', tryPlayAudio, { once: true, passive: true });
-window.addEventListener('click', tryPlayAudio, { once: true });
-
-if (dotsEl) {
-  let dotState = 0;
-  window.setInterval(() => {
-    dotState = (dotState + 1) % 4;
-    dotsEl.textContent = '.'.repeat(dotState);
-  }, 420);
+function tryStartAudio() {
+  if (audioStarted) return;
+  siteAudio.play().then(() => {
+    audioStarted = true;
+  }).catch(() => {
+    // iPhone often blocks autoplay with sound until first user interaction.
+  });
 }
 
-function hideLoading() {
-  if (loadingDone) return;
-  loadingDone = true;
-  if (loadingOverlay) {
-    loadingOverlay.classList.add('is-hidden');
-  }
-}
+window.addEventListener('pointerdown', tryStartAudio, { passive: true, once: false });
+window.addEventListener('touchstart', tryStartAudio, { passive: true, once: false });
+window.addEventListener('click', tryStartAudio, { passive: true, once: false });
+tryStartAudio();
 
 function clamp(value, min, max) {
   return Math.min(Math.max(value, min), max);
@@ -94,6 +87,27 @@ function clamp(value, min, max) {
 
 function easeToward(current, target, factor) {
   return current + (target - current) * factor;
+}
+
+function updateLoadingText() {
+  const dots = '.'.repeat(dotFrame % 4);
+  loadingText.textContent = `loading${dots}`;
+}
+
+setInterval(() => {
+  if (loadingComplete) return;
+  dotFrame += 1;
+  updateLoadingText();
+}, 420);
+updateLoadingText();
+
+function finishLoading() {
+  if (loadingComplete) return;
+  loadingComplete = true;
+  loadingText.textContent = 'loading...';
+  setTimeout(() => {
+    loadingScreen.classList.add('is-hidden');
+  }, 180);
 }
 
 function setModelTransforms(object) {
@@ -106,7 +120,7 @@ function setModelTransforms(object) {
   object.position.sub(center);
 
   const maxDimension = Math.max(size.x, size.y, size.z) || 1;
-  const desiredHeight = 2.2;
+  const desiredHeight = 1.55;
   const scale = desiredHeight / maxDimension;
   object.scale.setScalar(scale);
 
@@ -119,9 +133,7 @@ function setModelTransforms(object) {
   object.position.x -= fittedCenter.x;
   object.position.y -= fittedCenter.y;
   object.position.z -= fittedCenter.z;
-
-  object.position.y -= fittedSize.y * 0.05;
-  camera.position.z = 5.6;
+  object.position.y -= fittedSize.y * 0.08;
 }
 
 function addFallbackHead() {
@@ -130,18 +142,23 @@ function addFallbackHead() {
   const mat = new THREE.MeshStandardMaterial({ color: 0xcfcfcf, roughness: 0.68, metalness: 0.02 });
   const head = new THREE.Mesh(geo, mat);
   modelHolder.add(head);
-  hideLoading();
 }
 
-const loader = new GLTFLoader();
+const manager = new THREE.LoadingManager();
+manager.onLoad = () => {
+  finishLoading();
+};
+manager.onError = () => {
+  finishLoading();
+};
+
+const loader = new GLTFLoader(manager);
 loader.load(
   MODEL_PATH,
   (gltf) => {
     const model = gltf.scene;
     model.traverse((child) => {
       if (child.isMesh) {
-        child.castShadow = false;
-        child.receiveShadow = false;
         if (child.material) {
           child.material.needsUpdate = true;
         }
@@ -149,11 +166,11 @@ loader.load(
     });
     modelHolder.add(model);
     setModelTransforms(model);
-    hideLoading();
   },
   undefined,
   () => {
     addFallbackHead();
+    finishLoading();
   }
 );
 
@@ -187,6 +204,13 @@ window.addEventListener('pointermove', onPointerMove, { passive: true });
 window.addEventListener('pointerup', onPointerUp, { passive: true });
 window.addEventListener('pointercancel', onPointerUp, { passive: true });
 
+window.addEventListener('resize', () => {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+});
+
 function animate() {
   requestAnimationFrame(animate);
 
@@ -211,10 +235,3 @@ function animate() {
 }
 
 animate();
-
-window.addEventListener('resize', () => {
-  camera.aspect = window.innerWidth / window.innerHeight;
-  camera.updateProjectionMatrix();
-  renderer.setSize(window.innerWidth, window.innerHeight);
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-});
