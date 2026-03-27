@@ -98,7 +98,7 @@ function setModelTransforms(object) {
   object.position.y -= fittedCenter.y;
   object.position.z -= fittedCenter.z;
 
-  object.position.y -= fittedSize.y * 0.08;
+  object.position.y -= fittedSize.y * 0;
   camera.position.z = fittedSize.y > 3.8 ? 6.4 : 5.5;
 }
 
