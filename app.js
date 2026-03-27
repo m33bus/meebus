@@ -11,22 +11,22 @@ let targetRotationY = 0;
 let currentRotationX = 0;
 let currentRotationY = 0;
 let isDragging = false;
+let startX = 0;
+let startY = 0;
 let baseY = 0;
 
-// ---------- audio ----------
+// audio
 const audio = new Audio('assets/song.mp3');
 audio.loop = true;
-audio.volume = 1.0;
 
-const tryPlayAudio = () => {
+function tryPlayAudio() {
   audio.play().catch(() => {});
-};
-
+}
 tryPlayAudio();
 window.addEventListener('touchstart', tryPlayAudio, { once: true });
 window.addEventListener('click', tryPlayAudio, { once: true });
 
-// ---------- loading dots ----------
+// loading dots
 if (dots) {
   let dotState = 0;
   setInterval(() => {
@@ -35,7 +35,7 @@ if (dots) {
   }, 400);
 }
 
-// ---------- scene ----------
+// scene
 scene = new THREE.Scene();
 
 camera = new THREE.PerspectiveCamera(
@@ -45,8 +45,8 @@ camera = new THREE.PerspectiveCamera(
   100
 );
 
-// important: keep camera out in front
-camera.position.set(0, 0, 8);
+// pulled back so camera is not inside the head
+camera.position.set(0, 0, 5);
 
 renderer = new THREE.WebGLRenderer({
   canvas,
@@ -56,64 +56,34 @@ renderer = new THREE.WebGLRenderer({
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 
-// ---------- lights ----------
-const ambient = new THREE.AmbientLight(0xffffff, 1.15);
+// lights
+const ambient = new THREE.AmbientLight(0xffffff, 1.0);
 scene.add(ambient);
 
-const keyLight = new THREE.DirectionalLight(0xffffff, 1.4);
-keyLight.position.set(3, 2, 6);
+const keyLight = new THREE.DirectionalLight(0xffffff, 1.2);
+keyLight.position.set(3, 2, 5);
 scene.add(keyLight);
 
-const fillLight = new THREE.DirectionalLight(0xff4444, 0.45);
-fillLight.position.set(-4, 1, 3);
+const fillLight = new THREE.DirectionalLight(0xff3333, 0.35);
+fillLight.position.set(-3, 1, 3);
 scene.add(fillLight);
 
-// ---------- model ----------
+// model
 const loader = new GLTFLoader();
 loader.load(
   'assets/head.glb',
   (gltf) => {
     model = gltf.scene;
-    scene.add(model);
 
-    // measure the model
-    const box = new THREE.Box3().setFromObject(model);
-    const size = new THREE.Vector3();
-    const center = new THREE.Vector3();
-    box.getSize(size);
-    box.getCenter(center);
+    // simple fixed sizing
+    model.scale.set(0.14, 0.14, 0.14);
 
-    // center the model on its own middle
-    model.position.sub(center);
-
-    // recompute after centering
-    const recenteredBox = new THREE.Box3().setFromObject(model);
-    const recenteredSize = new THREE.Vector3();
-    recenteredBox.getSize(recenteredSize);
-
-    // aggressively normalize size so the head is much smaller
-    const maxDim = Math.max(recenteredSize.x, recenteredSize.y, recenteredSize.z) || 1;
-    const targetMaxDim = 2.2; // lower = smaller on screen
-    const scale = targetMaxDim / maxDim;
-    model.scale.setScalar(scale);
-
-    // recompute after scaling
-    const finalBox = new THREE.Box3().setFromObject(model);
-    const finalCenter = new THREE.Vector3();
-    const finalSize = new THREE.Vector3();
-    finalBox.getCenter(finalCenter);
-    finalBox.getSize(finalSize);
-
-    // center once more after scaling
-    model.position.sub(finalCenter);
-
-    // nudge slightly down and back for composition
-    model.position.y -= 0.15;
-    model.position.z -= 1.25;
-
+    // push model slightly away from camera
+    model.position.set(0, -0.15, -1.2);
     baseY = model.position.y;
 
-    // hide loading
+    scene.add(model);
+
     if (loadingOverlay) {
       loadingOverlay.style.opacity = '0';
       setTimeout(() => {
@@ -122,74 +92,70 @@ loader.load(
     }
   },
   undefined,
-  (err) => {
-    console.error('Model failed to load:', err);
+  (error) => {
+    console.error('Error loading model:', error);
   }
 );
 
-// ---------- controls ----------
-let startX = 0;
-let startY = 0;
-
-function beginDrag(x, y) {
-  isDragging = true;
-  startX = x;
-  startY = y;
-}
-
-function moveDrag(x, y) {
-  if (!isDragging) return;
-
-  const deltaX = x - startX;
-  const deltaY = y - startY;
-
-  targetRotationY = deltaX * 0.0045;
-  targetRotationX = deltaY * 0.0035;
-}
-
-function endDrag() {
-  isDragging = false;
-}
-
+// touch controls
 canvas.addEventListener('touchstart', (e) => {
-  const t = e.touches[0];
-  beginDrag(t.clientX, t.clientY);
+  isDragging = true;
+  startX = e.touches[0].clientX;
+  startY = e.touches[0].clientY;
 }, { passive: true });
 
 canvas.addEventListener('touchmove', (e) => {
-  const t = e.touches[0];
-  moveDrag(t.clientX, t.clientY);
+  if (!isDragging) return;
+
+  const deltaX = e.touches[0].clientX - startX;
+  const deltaY = e.touches[0].clientY - startY;
+
+  targetRotationY = deltaX * 0.004;
+  targetRotationX = deltaY * 0.003;
 }, { passive: true });
 
-canvas.addEventListener('touchend', endDrag);
+canvas.addEventListener('touchend', () => {
+  isDragging = false;
+});
 
+// mouse controls
 canvas.addEventListener('mousedown', (e) => {
-  beginDrag(e.clientX, e.clientY);
+  isDragging = true;
+  startX = e.clientX;
+  startY = e.clientY;
 });
 
 window.addEventListener('mousemove', (e) => {
-  moveDrag(e.clientX, e.clientY);
+  if (!isDragging) return;
+
+  const deltaX = e.clientX - startX;
+  const deltaY = e.clientY - startY;
+
+  targetRotationY = deltaX * 0.004;
+  targetRotationX = deltaY * 0.003;
 });
 
-window.addEventListener('mouseup', endDrag);
+window.addEventListener('mouseup', () => {
+  isDragging = false;
+});
 
-// ---------- animation ----------
+// animate
 function animate() {
   requestAnimationFrame(animate);
 
   if (model) {
     if (!isDragging) {
-      targetRotationX *= 0.965;
-      targetRotationY *= 0.965;
+      targetRotationX *= 0.96;
+      targetRotationY *= 0.96;
     }
 
-    currentRotationX += (targetRotationX - currentRotationX) * 0.085;
-    currentRotationY += (targetRotationY - currentRotationY) * 0.085;
+    currentRotationX += (targetRotationX - currentRotationX) * 0.08;
+    currentRotationY += (targetRotationY - currentRotationY) * 0.08;
 
     model.rotation.x = currentRotationX;
     model.rotation.y = currentRotationY;
 
-    model.position.y = baseY + Math.sin(Date.now() * 0.00115) * 0.06;
+    model.position.y = baseY + Math.sin(Date.now() * 0.001) * 0.05;
   }
 
   renderer.render(scene, camera);
@@ -197,7 +163,7 @@ function animate() {
 
 animate();
 
-// ---------- resize ----------
+// resize
 window.addEventListener('resize', () => {
   camera.aspect = window.innerWidth / window.innerHeight;
   camera.updateProjectionMatrix();
