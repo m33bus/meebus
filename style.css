@@ -224,6 +224,6 @@ canvas {
   }
 
   .site-haze {
-    filter: blur(24px);
+    filter: blur(50px);
   }
 }
