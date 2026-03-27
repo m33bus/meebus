@@ -19,7 +19,7 @@ const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x000000);
 
 const camera = new THREE.PerspectiveCamera(32, window.innerWidth / window.innerHeight, 0.1, 100);
-camera.position.set(0, 0, 4.8);
+camera.position.set(0, 0, 0);
 
 const hemi = new THREE.HemisphereLight(0xffffff, 0x111111, 1.6);
 scene.add(hemi);
@@ -120,7 +120,7 @@ function setModelTransforms(object) {
   object.position.sub(center);
 
   const maxDimension = Math.max(size.x, size.y, size.z) || 1;
-  const desiredHeight = 2.1;
+  const desiredHeight = 0.62;
   const scale = desiredHeight / maxDimension;
   object.scale.setScalar(scale);
 
@@ -134,7 +134,6 @@ function setModelTransforms(object) {
   object.position.y -= fittedCenter.y;
   object.position.z -= fittedCenter.z;
   object.position.y -= fittedSize.y * 0.08;
-  object.position.z = -1.2;
 }
 
 function addFallbackHead() {
