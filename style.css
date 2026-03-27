@@ -180,7 +180,7 @@ canvas {
 }
 
 .word-merch {
-  top: 40%;
+  top: 20%;
   left: max(calc(7vw + var(--safe-left)), 18px);
   transform: translateY(-50%);
 }
@@ -192,7 +192,7 @@ canvas {
 }
 
 .word-music {
-  left: 50%;
+  left: 20%;
   bottom: max(calc(98px + var(--safe-bottom)), 98px);
   transform: translateX(-50%);
 }
