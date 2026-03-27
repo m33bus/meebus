@@ -180,13 +180,13 @@ canvas {
 }
 
 .word-merch {
-  top: 20%;
+  top: 10%;
   left: max(calc(7vw + var(--safe-left)), 18px);
   transform: translateY(-50%);
 }
 
 .word-other {
-  top: 40%;
+  top: 10%;
   right: max(calc(7vw + var(--safe-right)), 18px);
   transform: translateY(-50%);
 }
