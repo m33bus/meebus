@@ -193,7 +193,7 @@ canvas {
 
 .word-music {
   left: 50%;
-  bottom: max(calc(84px + var(--safe-bottom)), 84px);
+  bottom: max(calc(98px + var(--safe-bottom)), 98px);
   transform: translateX(-50%);
 }
 
@@ -216,7 +216,7 @@ canvas {
   }
 
   .word-music {
-    bottom: max(calc(108px + var(--safe-bottom)), 108px);
+    bottom: max(calc(132px + var(--safe-bottom)), 132px);
   }
 
   .loading-inner {

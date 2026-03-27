@@ -120,7 +120,7 @@ function setModelTransforms(object) {
   object.position.sub(center);
 
   const maxDimension = Math.max(size.x, size.y, size.z) || 1;
-  const desiredHeight = 1.55;
+  const desiredHeight = 0.62;
   const scale = desiredHeight / maxDimension;
   object.scale.setScalar(scale);
 
