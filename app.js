@@ -20,7 +20,7 @@ const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x000000);
 
 const camera = new THREE.PerspectiveCamera(32, window.innerWidth / window.innerHeight, 0.1, 100);
-camera.position.set(0, 0.05, 5.5);
+camera.position.set(0, 0, 7.5);
 
 const hemi = new THREE.HemisphereLight(0xffffff, 0x111111, 1.6);
 scene.add(hemi);
