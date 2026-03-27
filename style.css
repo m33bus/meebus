@@ -182,13 +182,13 @@ canvas {
 .word-merch {
   top: 10%;
   left: max(calc(7vw + var(--safe-left)), 18px);
-  transform: translateY(-50%);
+  transform: translateY(-90%);
 }
 
 .word-other {
   top: 10%;
   right: max(calc(7vw + var(--safe-right)), 18px);
-  transform: translateY(-50%);
+  transform: translateY(-90%);
 }
 
 .word-music {
